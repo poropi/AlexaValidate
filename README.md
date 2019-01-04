@@ -1,6 +1,6 @@
 # Alexaリクエスト検証処理プログラム
 
-Alexaの自作スキル作成時、PHPでエンドポイントを作成する場合、<br>
+Alexaの自作スキル作成時、AWS LambdaではなくPHPでエンドポイントを作成する場合、<br>
 以下のリクエスト検証処理を実装する必要がございます。
 
 https://developer.amazon.com/ja/docs/custom-skills/host-a-custom-skill-as-a-web-service.html
