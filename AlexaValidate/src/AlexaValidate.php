@@ -1,4 +1,15 @@
 <?php
+
+class OutdatedCertExceptionException extends \Exception
+{
+}
+class RequestInvalidSignatureException extends \Exception
+{
+}
+class RequestInvalidTimestampException extends \Exception
+{
+}
+
 class AlexaValidate
 {
 
@@ -18,11 +29,9 @@ class AlexaValidate
 		$this->validateTimestamp($request);
 		try {
 			$this->validateSignature($request);
-		} catch (Exception $e) {
-			if ($e->getMessage() === 'OutdatedCertException') {
-				// load cert again and validate because temp file was outdatet.
-				$this->validateSignature($request);
-			}
+		} catch (OutdatedCertExceptionException $e) {
+			// load cert again and validate because temp file was outdatet.
+			$this->validateSignature($request);
 		}
 	}
 
@@ -37,7 +46,7 @@ class AlexaValidate
 		$differenceInSeconds = time() - $dateTime->getTimestamp();
 
 		if ($differenceInSeconds > $this->timestampTolerance) {
-			throw new Exception('Invalid timestamp.');
+			throw new RequestInvalidTimestampException('Invalid timestamp.');
 		}
 	}
 
@@ -53,7 +62,7 @@ class AlexaValidate
 
 		// validate cert url
 		if (false === (bool) preg_match("/https:\/\/s3.amazonaws.com(\:443)?\/echo.api\/*/i", $signatureCertChainUrl)) {
-			throw new Exception('Invalid cert url.');
+			throw new RequestInvalidSignatureException('Invalid cert url.');
 		}
 
 		// check if pem file is already downloaded to temp or download.
@@ -67,20 +76,20 @@ class AlexaValidate
 
 		// openssl cert validation
 		if (1 !== @openssl_verify($request, base64_decode($signature, true), $certData, 'sha1')) {
-			throw new Exception('Cert ssl verification failed.');
+			throw new RequestInvalidSignatureException('Cert ssl verification failed.');
 		}
 
 		// parse cert
 		$cert = @openssl_x509_parse($certData);
 		if (empty($cert)) {
-			throw new Exception('Parse cert failed.');
+			throw new RequestInvalidSignatureException('Parse cert failed.');
 		}
 
 		// validate cert subject
 		if (false === isset($cert['extensions']['subjectAltName']) ||
 				false === stristr($cert['extensions']['subjectAltName'], 'echo-api.amazon.com')
 				) {
-					throw new Exception('Cert subject error.');
+					throw new RequestInvalidSignatureException('Cert subject error.');
 				}
 
 				// validate cert validTo time
@@ -88,7 +97,7 @@ class AlexaValidate
 					if (file_exists($localCertPath)) {
 						@unlink($localCertPath);
 					}
-					throw new Exception('OutdatedCertException');
+					throw new OutdatedCertExceptionException('OutdatedCertException');
 				}
 	}
 
